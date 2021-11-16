@@ -9,10 +9,10 @@
 #define D_SET     1
 
 #define INTEGER_OPTIMIZE		0 // 정수 최적화 0,1
-#define SEARCH_ALGORITHM		4 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화
-#define INTERPOLATION_ALGORITHM 2 // 0 ~ 2	0:original	1:조건문 간소화	2:조건문 최종 간소화
+#define SEARCH_ALGORITHM		0 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화 5:다운카운팅 루프(가장최적)
+#define INTERPOLATION_ALGORITHM 0 // 0 ~ 2	0:original	1:조건문 간소화	2:조건문 최종 간소화
 
-#define INNER_TEST	1
+#define INNER_TEST	0
 #define RANDOM_TEST 0
 #define TEST_COUNT	180000	// INNER_TEST 시행하였을 때 원래 알고리즘이 20ms가 나오는 반복횟수
 
@@ -131,7 +131,7 @@ float32 IdTable[D_YMax][D_XMax] =
 int32 IntIdTable[D_YMax][D_XMax] =	//	10만(10⁵)배 정수화 테이블
 {
 	{0,     0,      0,      0,      0,      0,      0,      0,      0,      0},
-	{5625,  5625,   5625,   5625,   5625,   5625,   5625,   5625,   5625,   5625},
+	{5625,  5625,   5625,   5625,   5625,   5625,   5625,   5625,   5625,   5625},	//5625
 	{6500,  6500,   6500,   6500,   6500,   6500,   6500,   6500,   -10500, -10500},
 	{7125,  7125,   7125,   7125,   7125,   7125,   7125,   -8750,  -10500, -10500},
 	{8750,  8750,   8750,   8750,   8750,   8750,   -7374,  -8750,  -10500, -10500},
@@ -541,6 +541,35 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
 			}
 		}
 
+#elif(SEARCH_ALGORITHM==5)
+		// for문 개선 + Xcnt와 Ycnt를 지역변수 i로 바꿈
+		for (i = 5; i; i--)	// i를 가지고 5번 반복
+		{
+			if (Xval < SpeedTable[6 - i])		// X값이 스피드 테이블의 i+1번째 값보다 작을 때 Xpos는 i로 결정된다.
+			{
+				DI->Xpos = 5 - i;
+				break;
+			}
+			else if (Xval >= SpeedTable[i + 4])	// X값이 스피드 테이블의 9-i번째 값 이상일 때 Xpos는 9-i로 결정된다.
+			{
+				DI->Xpos = i + 4;
+				break;
+			}
+		}
+
+		for (i = 5; i; i--)	// i를 가지고 5번 반복
+		{
+			if (Yval < TorqueTable[6 - i])		// Y값이 토크 테이블의 i+1번째 값보다 작을 때 Ypos는 i로 결정된다.
+			{
+				DI->Ypos = 5 - i;
+				break;
+			}
+			else if (Yval >= TorqueTable[i + 4])	// Y값이 토크 테이블의 9-i번째 값 이상일 때 Ypos는 9-i로 결정된다.
+			{
+				DI->Ypos = i + 4;
+				break;
+			}
+		}
 #endif
 		// 여기까지 Xpos와 Ypos를 결정하였다.
 
