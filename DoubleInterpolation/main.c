@@ -9,12 +9,13 @@
 #define D_SET     1
 
 #define INTEGER_OPTIMIZE		0 // 정수 최적화 0,1
-#define SEARCH_ALGORITHM		0 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화 5:다운카운팅 루프(가장최적)
-#define INTERPOLATION_ALGORITHM 0 // 0 ~ 2	0:original	1:조건문 간소화	2:조건문 최종 간소화
+#define SEARCH_ALGORITHM		5 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화 5:다운카운팅 루프(가장최적)
+#define INTERPOLATION_ALGORITHM 2 // 0 ~ 2	0:original	1:조건문 간소화	2:조건문 최종 간소화
+#define TABLE_CHANGE			0
 
 #define INNER_TEST	0
 #define RANDOM_TEST 0
-#define TEST_COUNT	180000	// INNER_TEST 시행하였을 때 원래 알고리즘이 20ms가 나오는 반복횟수
+#define TEST_COUNT	184320	// INNER_TEST 시행하였을 때 원래 알고리즘이 20ms가 나오는 반복횟수
 
 inline int compare(int middle, float searchnum, float* table);
 //int binsearch(float searchnum, float* table);
@@ -50,6 +51,138 @@ node* insert(node* root, int data)
 			root->right = insert(root->right, data);
 	} return root;
 }
+
+// 배열을 연결 리스트로 구현하기 위함
+typedef struct id_node {
+	float32 data;
+	Uint8 x_max;
+	//Uint8 y_max;
+	struct id_node* next;
+}id_node;
+
+id_node* idPointerTable[D_YMax+1];
+
+void add_node(id_node** head_node, float32 data, Uint8 x_max) //리스트의 마지막 노드에 삽입
+{
+	id_node* new_node;
+	id_node* last_node;
+	new_node = (id_node*)malloc(sizeof(id_node));
+	new_node->data = data;
+	new_node->x_max = x_max;
+	//new_node->y_max = y_max;
+	new_node->next = NULL;
+
+	if (*head_node == NULL) {        //현재 리스트가 공백인 경우
+		*head_node = new_node;
+		return;
+	}
+
+	last_node = *head_node;
+	while (last_node->next != NULL) last_node = last_node->next;
+	last_node->next = new_node;
+}
+
+
+
+void init_id_node(void)
+{
+#if 1 // add_node x축 방향으로만 추가한 경우
+	add_node(&idPointerTable[0], 0, 10);
+
+	add_node(&idPointerTable[1], 0.5625, 10);
+
+	add_node(&idPointerTable[2], 0.065, 7);
+	add_node(&idPointerTable[2], -0.105, 10);
+
+	add_node(&idPointerTable[3], 0.07125, 6);
+	add_node(&idPointerTable[3], -0.0875, 7);
+	add_node(&idPointerTable[3], -0.105, 10);
+
+	add_node(&idPointerTable[4], 0.0875, 5);
+	add_node(&idPointerTable[4], -0.07375, 6);
+	add_node(&idPointerTable[4], -0.0875, 7);
+	add_node(&idPointerTable[4], -0.105, 10);
+
+	add_node(&idPointerTable[5], 0.10875, 4);
+	add_node(&idPointerTable[5], -0.06625, 5);
+	add_node(&idPointerTable[5], -0.07375, 6);
+	add_node(&idPointerTable[5], -0.0875, 7);
+	add_node(&idPointerTable[5], -0.105, 10);
+
+	add_node(&idPointerTable[6], 0.13125, 3);
+	add_node(&idPointerTable[6], -0.04625, 4);
+	add_node(&idPointerTable[6], -0.06625, 5);
+	add_node(&idPointerTable[6], -0.07375, 6);
+	add_node(&idPointerTable[6], -0.0875, 7);
+	add_node(&idPointerTable[6], -0.105, 10);
+
+	add_node(&idPointerTable[7], 0.16875, 2);
+	add_node(&idPointerTable[7], -0.02, 3);
+	add_node(&idPointerTable[7], -0.04625, 4);
+	add_node(&idPointerTable[7], -0.06625, 5);
+	add_node(&idPointerTable[7], -0.07375, 6);
+	add_node(&idPointerTable[7], -0.0875, 7);
+	add_node(&idPointerTable[7], -0.105, 10);
+
+	add_node(&idPointerTable[8], 0.22125, 1);
+	add_node(&idPointerTable[8], 0.01375, 2);
+	add_node(&idPointerTable[8], -0.02, 3);
+	add_node(&idPointerTable[8], -0.04625, 4);
+	add_node(&idPointerTable[8], -0.06625, 5);
+	add_node(&idPointerTable[8], -0.07375, 6);
+	add_node(&idPointerTable[8], -0.0875, 7);
+	add_node(&idPointerTable[8], -0.105, 10);
+
+	add_node(&idPointerTable[9], 0.28125, 0);
+	add_node(&idPointerTable[9], 0.07125, 1);
+	add_node(&idPointerTable[9], 0.01375, 2);
+	add_node(&idPointerTable[9], -0.02, 3);
+	add_node(&idPointerTable[9], -0.04625, 4);
+	add_node(&idPointerTable[9], -0.06625, 5);
+	add_node(&idPointerTable[9], -0.07375, 6);
+	add_node(&idPointerTable[9], -0.0875, 7);
+	add_node(&idPointerTable[9], -0.105, 10);
+
+	add_node(&idPointerTable[10], 0.28125, 0);
+	add_node(&idPointerTable[10], 0.07125, 1);
+	add_node(&idPointerTable[10], 0.01375, 2);
+	add_node(&idPointerTable[10], -0.02, 3);
+	add_node(&idPointerTable[10], -0.04625, 4);
+	add_node(&idPointerTable[10], -0.06625, 5);
+	add_node(&idPointerTable[10], -0.07375, 6);
+	add_node(&idPointerTable[10], -0.0875, 7);
+	add_node(&idPointerTable[10], -0.105, 10);
+#else // add_node x축과 y축 방향으로 추가한 경우
+	add_node(idPointerTable[0], 0, 9, 0);
+
+	add_node(idPointerTable[1], 0.5625, 9, 1);
+
+	add_node(idPointerTable[2], 0.065, 7, 2);
+	add_node(idPointerTable[2], -0.105, 9,9);
+
+	add_node(idPointerTable[3], 0.07125, 6, 3);
+	add_node(idPointerTable[3], -0.0875, 7, 9);
+
+	add_node(idPointerTable[4], 0.0875, 5, 4);
+	add_node(idPointerTable[4], -0.07375, 6, 9);
+
+	add_node(idPointerTable[5], 0.10875, 4, 5);
+	add_node(idPointerTable[5], -0.06625, 5,9);
+
+	add_node(idPointerTable[6], 0.13125, 3, 6);
+	add_node(idPointerTable[6], -0.04625, 4, 9);
+
+	add_node(idPointerTable[7], 0.16875, 2, 7);
+	add_node(idPointerTable[7], -0.02, 3, 9);
+
+	add_node(idPointerTable[8], 0.22125, 1, 8);
+	add_node(idPointerTable[8], 0.01375, 2,9);
+
+	add_node(idPointerTable[9], 0.28125, 0, 9);
+	add_node(idPointerTable[9], 0.07125, 1, 9);
+#endif
+}
+
 
 typedef struct {
 	Uint8 QAxis;
@@ -99,6 +232,8 @@ float32 TorqueTable[D_YMax] = { 0, 0.37, 0.40, 0.43, 0.48, 0.54, 0.61, 0.71, 0.8
 int32 IntSpeedTable[D_XMax] = { 51000, 61000, 71000, 81000, 91000, 101000, 111000, 121000, 131000, 141000 };
 int32 IntTorqueTable[D_YMax] = { 0, 37000, 40000, 43000, 48000, 54000, 61000, 71000, 84000, 100000 };
 
+float32 RandomTable[32] = { 0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1,1.05,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.45,1.5,1.55 };
+
 float32 IqTable[D_YMax][D_XMax] =	/* 10 X 10 */
 {
 	{0,			0,			0,			0,			0,			0,			0,			0,			0,			0},
@@ -127,6 +262,20 @@ float32 IdTable[D_YMax][D_XMax] =
 	{0.22125, 	0.22125, 	0.01375, 	-0.02,		-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105,		-0.105},
 	{0.28125, 	0.07125, 	0.01375, 	-0.02,		-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105,		-0.105},
 };
+
+//float32 (*ReducedIdTable)[D_YMax] =
+//{
+//	{0},
+//	{0.05625},
+//	{0.065,		-0.105},
+//	{0.07125, 	-0.0875,	-0.105},
+//	{0.0875,	-0.07375,	-0.0875,	-0.105},
+//	{0.10875, 	-0.06625,	-0.07375,	-0.0875, 	-0.105},
+//	{0.13125, 	-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105},
+//	{0.16875, 	-0.02,		-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105},
+//	{0.22125, 	0.01375, 	-0.02,		-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105},
+//	{0.28125, 	0.07125, 	0.01375, 	-0.02,		-0.04625,	-0.06625,	-0.07375,	-0.0875, 	-0.105},
+//};
 
 int32 IntIdTable[D_YMax][D_XMax] =	//	10만(10⁵)배 정수화 테이블
 {
@@ -289,7 +438,7 @@ float32 IntDoubleInterpolataion(sDoubleInterp* DI, int32(*Table)[3])
 	return DI->XYdata_Intp_Double/100000;	// XYdata_Intp_Double 리턴
 }
 
-float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
+float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])
 {
 
 	float32 Xval, Yval; // DI->Xval, DI->Yval 대신 써먹을 변수
@@ -337,27 +486,27 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
 		if (DI->Xval > SpeedTable[D_XMax - 1])
 		{
 			DI->Xval = SpeedTable[D_XMax - 1];		// X값이 스피드테이블의 최대값보다 크면 스피드테이블의 최대값으로 입력되게 함
-			DI->Xpos = 9;
-			XposExist = 1;
+			//DI->Xpos = 9;
+			//XposExist = 1;
 		}
 		else if (DI->Xval <= SpeedTable[0])
 		{
 			DI->Xval = SpeedTable[0];				// X값이 스피드테이블의 최소값보다 작거나 같으면 스피드테이블의 최소값으로 입력되게 함
-			DI->Xpos = 0;
-			XposExist = 1;
+			//DI->Xpos = 0;
+			//XposExist = 1;
 		}
 
 		if (DI->Yval > TorqueTable[D_YMax - 1])
 		{
 			DI->Yval = TorqueTable[D_YMax - 1];		// Y값이 스피드테이블의 최대값보다 크면 스피드테이블의 최대값으로 입력되게 함
-			DI->Ypos = 9;
-			YposExist = 1;
+			//DI->Ypos = 9;
+			//YposExist = 1;
 		}
 		else if (DI->Yval <= TorqueTable[0])
 		{
 			DI->Yval = TorqueTable[0];				// Y값이 스피드테이블의 최소값보다 작거나 같으면 스피드테이블의 최소값으로 입력되게 함
-			DI->Ypos = 0;
-			YposExist = 1;
+			//DI->Ypos = 0;
+			//YposExist = 1;
 		}
 
 
@@ -573,9 +722,66 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
 #endif
 		// 여기까지 Xpos와 Ypos를 결정하였다.
 
+#if(TABLE_CHANGE)
+		DI->Xindex = SpeedTable[DI->Xpos];			//	Xindex는 스피드테이블의 Xpos번째 값
+		DI->Xindex_X1 = SpeedTable[DI->Xpos + 1];	//	Xindex_X1은 스피드테이블의 (Xpos+1)번째 값
 
-#if 1
-#if(!INTEGER_OPTIMIZE)
+		DI->Yindex = TorqueTable[DI->Ypos];			//	Yindex는 스피드테이블의 Ypos번째 값
+		DI->Yindex_Y1 = TorqueTable[DI->Ypos + 1];	//	Yindex_Y1은 스피드테이블의 (Ypos+1)번째 값
+
+
+		//xdata = Table[D_DATAIndex][Xpos];
+
+
+		id_node* node_pointer;
+		node_pointer = idPointerTable[DI->Ypos];
+		while (1) 
+		{
+			if ((DI->Xpos) <= (node_pointer->x_max)) // DI->XYdata = Table[DI->Ypos][DI->Xpos];
+			{
+				DI->XYdata = node_pointer->data;
+				break;
+			}
+			node_pointer = node_pointer->next;
+		}
+		
+		node_pointer = idPointerTable[DI->Ypos];
+		while (1)
+		{
+			if ((DI->Xpos + 1) <= (node_pointer->x_max))
+			{
+				DI->XYdata_X1 = node_pointer->data;	 // DI->XYdata_X1 = Table[DI->Ypos][DI->Xpos + 1];		
+				break;
+			}
+			node_pointer = node_pointer->next;
+		}
+		
+		node_pointer = idPointerTable[(DI->Ypos) + 1];
+		while (1)
+		{
+			if ((DI->Xpos) <= (node_pointer->x_max))
+			{
+				DI->XYdata_Y1 = node_pointer->data;  // DI->XYdata_Y1 = Table[DI->Ypos + 1][DI->Xpos];
+				break;
+			}
+			node_pointer = node_pointer->next;
+
+		}
+
+		node_pointer = idPointerTable[(DI->Ypos) + 1];
+		while (1)
+		{
+			if ((DI->Xpos + 1) <= (node_pointer->x_max))
+			{
+				DI->XYdata_X1Y1 = node_pointer->data;// DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];
+				break;
+			}
+			node_pointer = node_pointer->next;
+		}
+
+		DI->Xindex_Div = 1. / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
+		DI->Yindex_Div = 1. / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
+#else
 		DI->Xindex = SpeedTable[DI->Xpos];			//	Xindex는 스피드테이블의 Xpos번째 값
 		DI->Xindex_X1 = SpeedTable[DI->Xpos + 1];	//	Xindex_X1은 스피드테이블의 (Xpos+1)번째 값
 
@@ -591,25 +797,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
 		DI->Xindex_Div = 1. / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
 		DI->Yindex_Div = 1. / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
 #endif
-#else
-// Xpos와 Ypos를 대입하여 사용함
-		Xpos = DI->Xpos;
-		Ypos = DI->Ypos;
-		DI->Xindex = SpeedTable[Xpos];			//	Xindex는 스피드테이블의 Xpos번째 값
-		DI->Xindex_X1 = SpeedTable[Xpos + 1];	//	Xindex_X1은 스피드테이블의 (Xpos+1)번째 값
 
-		DI->Yindex = TorqueTable[Ypos];			//	Yindex는 스피드테이블의 Ypos번째 값
-		DI->Yindex_Y1 = TorqueTable[Ypos + 1];	//	Yindex_Y1은 스피드테이블의 (Ypos+1)번째 값
-
-		//xdata = Table[D_DATAIndex][Xpos];
-		DI->XYdata = Table[Ypos][Xpos];			//	XYdata는 테이블의 (Xpos,Ypos) 값
-
-		DI->XYdata_X1 = Table[Ypos][Xpos + 1];	//	XYdata_X1은 테이블의 (Xpos+1,Ypos) 값
-		DI->XYdata_Y1 = Table[Ypos + 1][Xpos];	//	XYdata_Y1은 테이블의 (Xpos,Ypos+1) 값
-
-		DI->Xindex_Div = 1. / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
-		DI->Yindex_Div = 1. / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
-#endif
 
 #if(INTERPOLATION_ALGORITHM==0)
 
@@ -727,7 +915,9 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[3])
 		{
 			if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
 			{
+#if(!TABLE_CHANGE)
 				DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+#endif
 
 				DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
 				DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
@@ -788,17 +978,23 @@ int main()
 	//	  0	  2   5	  8
 	//		   3   6	9
 #endif
+#if(TABLE_CHANGE)
+	init_id_node();
+#endif
 #if(RANDOM_TEST)
 	srand((unsigned)time(NULL));
 	start_time = clock();
 	for (int i = 0; i < TEST_COUNT; i++)
 	{
-		Id.Xval = (float)(rand() % 20) / 10;
-		Id.Yval = (float)(rand() % 10) / 10;
+		Id.Xval = RandomTable[i % 32];
+		Id.Yval = RandomTable[i % 32];
 		Id.QAxis = D_CLEAR; // QAxis는 0이다
 #else
-	Id.Xval = 1.01;		// X값 설정
-	Id.Yval = 0.43;		// Y값 설정
+	//Id.Xval = 1.01;		// X값 설정
+	//Id.Yval = 0.43;		// Y값 설정
+	//Id.QAxis = D_CLEAR; // QAxis는 0이다
+	Id.Xval = 1.51;		// X값 범위 외
+	Id.Yval = 1.23;		// Y값 범위 외
 	Id.QAxis = D_CLEAR; // QAxis는 0이다
 #endif
 #if(INTEGER_OPTIMIZE)
