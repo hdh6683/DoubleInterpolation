@@ -9,16 +9,16 @@
 #define D_SET     1
 
 #define INTEGER_OPTIMIZE		0 // 정수 최적화 0,1
-#define SEARCH_ALGORITHM		4 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화 5:다운카운팅 루프(가장최적)
-#define INTERPOLATION_ALGORITHM 3 // 0 ~ 3	0:original	1:조건문 간소화	2:조건문 최종 간소화	3:조건에 따라 필요한 계산만 함
+#define SEARCH_ALGORITHM		3 // 0 ~ 4	0:original	1:for문 최적화	2:for문+루프변수	3:이진탐색	4:이진트리 최적화 5:다운카운팅 루프(가장최적)
+#define INTERPOLATION_ALGORITHM 2 // 0 ~ 3	0:original	1:조건문 간소화	2:조건문 최종 간소화(가장 최적)	3:조건에 따라 필요한 계산만 함
 #define TABLE_CHANGE			0 // 0 ~ 3  0:original	1:연결리스트 사용	2:logic_table 함수	3:11x11배열 사용
 
 #define PRINT_TEST				0
-#define INNER_TEST				1
+#define INNER_TEST				0
 #define RANDOM_TEST				0
 #define TEST_COUNT				/*32*/184320	// INNER_TEST 시행하였을 때 원래 알고리즘이 20ms가 나오는 반복횟수
-#define INTERPOLATION_TIME		1
-#define SEARCH_TIME				1
+#define INTERPOLATION_TIME		0 // TEST_COUNT 사용
+#define SEARCH_TIME				0 // TEST_COUNT 사용
 
 inline int compare(int middle, float searchnum, float* table);
 //int binsearch(float searchnum, float* table);
@@ -479,7 +479,11 @@ float32 IntDoubleInterpolataion(sDoubleInterp* DI, int32(*Table)[3])
 
 float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 최승훈 책임님이랑 이야기 후 float32(*Table)[11])로 수정함.
 {
-
+#if 0
+	float32 speedTable[D_XMax] = { 0.51, 0.61, 0.71, 0.81, 0.91, 1.01, 1.11, 1.21, 1.31, 1.41 };	// 지역 배열
+	float32 torqueTable[D_YMax] = { 0, 0.37, 0.40, 0.43, 0.48, 0.54, 0.61, 0.71, 0.84, 1.0 };		// 지역 배열	
+	//임시로 작성한 배열
+#endif
 	float32 Xval, Yval; // DI->Xval, DI->Yval 대신 써먹을 변수
 
 	Uint8 Xpos, Ypos;   // DI->Xpos, DI->Ypos 대신 써먹을 변수
@@ -488,6 +492,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 	Uint32 middle;
 	Uint32 left;
 	Uint32 right;
+	int32 compare_num;
 
 #if(SEARCH_ALGORITHM==4)
 	node* temp;
@@ -502,7 +507,6 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 		XposExist = 0;
 		YposExist = 0;
 #endif
-		register unsigned int i;				// cnt 대신 써먹을 변수
 
 		if (DI->Xval >= D_ZERO)	// X값이 0 이상이면 XSign을 0으로 clear
 		{
@@ -523,6 +527,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 			DI->YSign = D_SET;		// -
 			DI->Yval = -DI->Yval;
 		}
+
 
 		if (DI->Xval >= SpeedTable[D_XMax - 1])
 		{
@@ -563,7 +568,12 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 		Xval = DI->Xval;	// DI->Xval 대신에 Xval 사용함으로써 불필요한 포인터 연산 줄임
 		Yval = DI->Yval;	// DI->Yval 대신에 Yval 사용함으로써 불필요한 포인터 연산 줄임
 
-
+#if(SEARCH_TIME)
+		clock_t search_start, search_end;
+		search_start = clock();
+		for (int i = 0; i < TEST_COUNT; i++)
+		{
+#endif
 #if(SEARCH_ALGORITHM==0)
 		// 기존의 알고리즘
 		for (DI->Xcnt = 0; DI->Xcnt <= (D_XMax - 1); DI->Xcnt++)	// Xcnt를 가지고 D_Max(10)번 반복
@@ -597,7 +607,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 	}
 #elif(SEARCH_ALGORITHM==1)
 		// for문 개선하여 앞뒤로 찾는 알고리즘
-		for (i = 0; i <= (D_XMax - 1); i++)	// Xcnt를 가지고 D_Max(10)번 반복
+		for (int i = 0; i <= (D_XMax - 1); i++)	// Xcnt를 가지고 D_Max(10)번 반복
 		{
 			if (DI->Xval >= SpeedTable[i])	// X값이 스피드테이블 안의 X값보다 큰가?
 			{
@@ -612,7 +622,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 			}
 		}
 
-		for (i = 0; i <= (D_YMax - 1); i++)	// Ycnt를 가지고 D_Max(10)번 반복
+		for (int i = 0; i <= (D_YMax - 1); i++)	// Ycnt를 가지고 D_Max(10)번 반복
 		{
 			if (DI->Yval >= TorqueTable[i])	// Y값이 스피드테이블 안의 X값보다 큰가?
 			{
@@ -629,7 +639,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 
 #elif(SEARCH_ALGORITHM==2)
 		// for문 개선 + Xcnt와 Ycnt를 지역변수 i로 바꿈
-		for (i = 0; i < 5; i++)	// i를 가지고 5번 반복
+		for (register unsigned int i = 0; i < 5; i++)	// i를 가지고 5번 반복
 		{
 			if (Xval < SpeedTable[i + 1])		// X값이 스피드 테이블의 i+1번째 값보다 작을 때 Xpos는 i로 결정된다.
 			{
@@ -643,7 +653,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 			}
 		}
 
-		for (i = 0; i < 5; i++)	// i를 가지고 5번 반복
+		for (register unsigned int i = 0; i < 5; i++)	// i를 가지고 5번 반복
 		{
 			if (Yval < TorqueTable[i + 1])		// Y값이 토크 테이블의 i+1번째 값보다 작을 때 Ypos는 i로 결정된다.
 			{
@@ -658,23 +668,68 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 		}
 #elif(SEARCH_ALGORITHM==3)
 		// 이진 탐색 알고리즘
+#if(SEARCH_TIME)
+		XposExist = 0;
+		YposExist = 0;
+#endif
+
+
+
 		// left = 0, right = n-1 로 전달
 		left = 0, right = 9;
 		while (!XposExist)
 		{
 			middle = (left + right)>> 1;
-			switch (compare(middle, Xval, SpeedTable))
+#if 1
+			// switch로 구현
+			compare_num = ((Xval < SpeedTable[middle]) ? -1 : ((SpeedTable[middle] <= Xval) && (Xval < SpeedTable[middle + 1])) ? 0 : 1);
+			
+			switch (compare_num)
 			{
 			case  -1:
 				right = middle - 1;
 				break;
-			case   0:
+			case   1:
+				left = middle + 1;
+				break;
+			default:
 				DI->Xpos = middle;
 				XposExist = 1;
 				break;
-			case   1:
-				left = middle + 1;
 			}
+#else
+			// if로 구현
+			compare_num = ((Xval < SpeedTable[middle]) ? -1 : ((SpeedTable[middle] <= Xval) && (Xval < SpeedTable[middle + 1])) ? 0 : 1);
+
+			if (compare_num < 0)
+			{
+				right = middle - 1;
+			}
+			else
+			{
+#if 1
+				if (compare_num)
+				{
+					left = middle + 1;
+				}
+				else
+				{
+					DI->Xpos = middle;
+					break;
+				}
+#else
+				if (!compare_num)
+				{
+					DI->Ypos = middle;
+					break;
+				}
+				else
+				{
+					left = middle + 1;
+				}
+#endif
+			}
+#endif
 		}
 
 		/*printf("Xpos : %d\n", DI->Xpos);*/
@@ -684,65 +739,109 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 		while (!YposExist)
 		{
 			middle = (left + right) >> 1;
-			switch (compare(middle, Yval, TorqueTable))
+			compare_num = ((Yval < TorqueTable[middle]) ? -1 : ((TorqueTable[middle] <= Yval) && (Yval < TorqueTable[middle + 1])) ? 0 : 1);
+#if 1
+			switch (compare_num)
 			{
 			case  -1:
 				right = middle - 1;
 				break;
-			case   0:
+			case   1:
+				left = middle + 1;
+				break;
+			default:
 				DI->Ypos = middle;
 				YposExist = 1;
 				break;
-			case   1:
-				left = middle + 1;
 			}
+#else
+
+			if (compare_num < 0)
+			{
+				right = middle - 1;
+			}
+			else
+			{
+#if 1
+				if (compare_num)
+				{
+					left = middle + 1;
+				}
+				else
+				{
+					DI->Ypos = middle;
+					break;
+				}
+#else
+				if (!compare_num)
+				{
+					DI->Ypos = middle;
+					break;
+				}
+				else
+				{
+					left = middle + 1;
+				}
+#endif
+			}
+#endif
 		}
 
 
 		/*printf("Ypos : %d\n", DI->Ypos);*/
 
 #elif(SEARCH_ALGORITHM==4)
+#if(SEARCH_TIME)
+		XposExist = 0;
+		YposExist = 0;
+#endif
+
 		temp = treePointer;
 		while (!XposExist)
 		{
-			switch (compare(temp->data, Xval,SpeedTable))
+			compare_num = ((Xval < SpeedTable[temp->data]) ? -1 : ((SpeedTable[temp->data] <= Xval) && (Xval < SpeedTable[temp->data + 1])) ? 0 : 1);
+			switch (compare_num)
 			{
 			case  -1:
 				temp = temp->left;
 				//right = middle - 1;
 				break;
-			case   0:
+			case   1:
+				temp = temp->right;
+				break;
+				//left = middle + 1;
+			default:
 				DI->Xpos = temp->data;
 				XposExist = 1;
 				break;
-			case   1:
-				temp = temp->right;
-				//left = middle + 1;
 			}
 		}
+		
 
 		temp = treePointer;
 		while (!YposExist)
 		{
-			switch (compare(temp->data, Yval, TorqueTable))
+			compare_num = ((Yval < TorqueTable[temp->data]) ? -1 : ((TorqueTable[temp->data] <= Yval) && (Yval < TorqueTable[temp->data + 1])) ? 0 : 1);
+			switch (compare_num)
 			{
 			case  -1:
 				temp = temp->left;
 				//right = middle - 1;
 				break;
-			case   0:
+			case   1:
+				temp = temp->right;
+				break;
+				//left = middle + 1;
+			default:
 				DI->Ypos = temp->data;
 				YposExist = 1;
 				break;
-			case   1:
-				temp = temp->right;
-				//left = middle + 1;
 			}
 		}
 
 #elif(SEARCH_ALGORITHM==5)
 		// for문 개선 + Xcnt와 Ycnt를 지역변수 i로 바꿈
-		for (i = 5; i; i--)	// i를 가지고 5번 반복
+		for (register unsigned int i = 5; i; i--)	// i를 가지고 5번 반복
 		{
 			if (Xval < SpeedTable[6 - i])		// X값이 스피드 테이블의 i+1번째 값보다 작을 때 Xpos는 i로 결정된다.
 			{
@@ -756,7 +855,7 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 			}
 		}
 
-		for (i = 5; i; i--)	// i를 가지고 5번 반복
+		for (register unsigned int i = 5; i; i--)	// i를 가지고 5번 반복
 		{
 			if (Yval < TorqueTable[6 - i])		// Y값이 토크 테이블의 i+1번째 값보다 작을 때 Ypos는 i로 결정된다.
 			{
@@ -770,6 +869,12 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 			}
 		}
 #endif
+#if(SEARCH_TIME)
+		}
+		search_end = clock();
+		printf("Search를 %d번 반복 : %dms\n", TEST_COUNT, search_end - search_start);
+#endif
+
 		// 여기까지 Xpos와 Ypos를 결정하였다.
 
 #if(TABLE_CHANGE==1)
@@ -891,218 +996,232 @@ float32 DoubleInterpolataion(sDoubleInterp* DI, float32(*Table)[10])	//	211119 �
 #endif
 
 #endif
+
+
+#if(INTERPOLATION_TIME)
+		clock_t inter_start, inter_end;
+		inter_start = clock();
+		for (int i = 0; i < TEST_COUNT; i++)
+		{
+#endif
+
 #if(INTERPOLATION_ALGORITHM!=2&&INTERPOLATION_ALGORITHM!=3)
-		DI->Xindex_Div = 1. / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
-		DI->Yindex_Div = 1. / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
+			DI->Xindex_Div = 1. / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
+			DI->Yindex_Div = 1. / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
 #endif
 
 #if(INTERPOLATION_ALGORITHM==0)
 
 		//(DI->Xval == 0) 
 		//즉 Xval가 0일 때
-		if (DI->Xval == SpeedTable[0])		// Xval가 SpeedTable의 0번째 값이랑 같으면
-		{
-			if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+			if (DI->Xval == SpeedTable[0])		// Xval가 SpeedTable의 0번째 값이랑 같으면
 			{
-				DI->XYdata_Intp_Double = DI->XYdata; // XYdata_Intp_Double은 그냥 XYdata이다.
+				if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata; // XYdata_Intp_Double은 그냥 XYdata이다.
 
-			}
-			else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{	// XYdata_Intp_Double은 (((Yval-Yindex)*Yindex_Div)*(XYdata_Y1-XYdata))+XYdata
-				DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
-			}
-			else if (DI->Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata; // XYdata_Intp_Double은 그냥 XYdata이다.
-			}
-		}
-
-		//(DI->Xval > 0) && (DI->Xval < SpeedTable[DI->Xpos]) 
-		//즉 0 < Xval < SpeedTable[Xpos]
-		if ((DI->Xval > SpeedTable[0]) && (DI->Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
-		{
-			if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				// XYdata_Intp_Double = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
-			}
-			else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
-
-				DI->XYdata_Intp_X1 = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				// XYdata_Intp_X1 = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
-				DI->XYdata_Intp_Y1 = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
-				// XYdata_Intp_Y1 = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1Y1 - XYdata_Y1)) + XYdata_Y1;
-				DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
-				// XYdata_Intp_Double = (((Yval - Yindex) * Yindex_Div) * (XYdata_Intp_Y1 - XYdata_Intp_X1)) + XYdata_Intp_X1;
-			}
-			else if (DI->Yval == TorqueTable[D_YMax - 1]) // Yval가 TorqueTable[9]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				// XYdata_Intp_Double = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
-			}
 				}
+				else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{	// XYdata_Intp_Double은 (((Yval-Yindex)*Yindex_Div)*(XYdata_Y1-XYdata))+XYdata
+					DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
+				}
+				else if (DI->Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata; // XYdata_Intp_Double은 그냥 XYdata이다.
+				}
+			}
+
+			//(DI->Xval > 0) && (DI->Xval < SpeedTable[DI->Xpos]) 
+			//즉 0 < Xval < SpeedTable[Xpos]
+			if ((DI->Xval > SpeedTable[0]) && (DI->Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
+			{
+				if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					// XYdata_Intp_Double = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
+				}
+				else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+
+					DI->XYdata_Intp_X1 = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					// XYdata_Intp_X1 = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
+					DI->XYdata_Intp_Y1 = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
+					// XYdata_Intp_Y1 = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1Y1 - XYdata_Y1)) + XYdata_Y1;
+					DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+					// XYdata_Intp_Double = (((Yval - Yindex) * Yindex_Div) * (XYdata_Intp_Y1 - XYdata_Intp_X1)) + XYdata_Intp_X1;
+				}
+				else if (DI->Yval == TorqueTable[D_YMax - 1]) // Yval가 TorqueTable[9]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((DI->Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					// XYdata_Intp_Double = (((Xval - Xindex) * Xindex_Div) * (XYdata_X1 - XYdata)) + XYdata;
+				}
+			}
 
 
-		//(DI->Xval == SpeedTable[DI->Xpos])
-		//즉 Xval == SpeedTable[Xpos]
-		if (DI->Xval == SpeedTable[D_XMax - 1])	// Xval == SpeedTable[9]
-		{
-			if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+			//(DI->Xval == SpeedTable[DI->Xpos])
+			//즉 Xval == SpeedTable[Xpos]
+			if (DI->Xval == SpeedTable[D_XMax - 1])	// Xval == SpeedTable[9]
 			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				if (DI->Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
+				else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
+					//XYdata_Intp_Double = (((Yval - Yindex) * Yindex_Div) * (XYdata_Y1 - XYdata)) + XYdata;
+				}
+				else if (DI->Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
 			}
-			else if (DI->Yval > TorqueTable[0] && DI->Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->XYdata_Intp_Double = (((DI->Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
-				//XYdata_Intp_Double = (((Yval - Yindex) * Yindex_Div) * (XYdata_Y1 - XYdata)) + XYdata;
-			}
-			else if (DI->Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
-			}
-		}
 
 #elif(INTERPOLATION_ALGORITHM==1)
 
 		//(DI->Xval > 0) && (DI->Xval < SpeedTable[DI->Xpos]) 
 		//즉 0 < Xval < SpeedTable[Xpos]
-		if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
-		{
-			if (Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+			if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
 			{
-				DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-			}
-			else if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+				if (Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				}
+				else if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
 
-				DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+					DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+				}
+				else if (Yval == TorqueTable[D_YMax - 1]) // Yval가 TorqueTable[9]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				}
 			}
-			else if (Yval == TorqueTable[D_YMax - 1]) // Yval가 TorqueTable[9]랑 같을 때
+			else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
 			{
-				DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				if (Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
+				else if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
+				}
+				else if (Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
 			}
-		}
-		else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
-		{
-			if (Yval == TorqueTable[0])	// Yval가 TorqueTable[0]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
-			}
-			else if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
-			}
-			else if (Yval == TorqueTable[D_YMax - 1])	// Yval가 TorqueTable[9]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
-			}
-		}
 
 
 #elif(INTERPOLATION_ALGORITHM==2)
 
 		//(DI->Xval > 0) && (DI->Xval < SpeedTable[DI->Xpos]) 
 		//즉 0 < Xval < SpeedTable[Xpos]
-		if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
-		{
-			DI->Xindex_Div = 1.f / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
-			DI->Yindex_Div = 1.f / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
-			if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+			if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
 			{
-#if(TABLE_CHANGE==1)
-				for (node_pointer = idPointerTable[(DI->Ypos) + 1]; node_pointer; node_pointer = node_pointer->next)
+				DI->Xindex_Div = 1.f / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
+				DI->Yindex_Div = 1.f / (DI->Yindex_Y1 - DI->Yindex);	//	Xindex_Div = 1 / (Yindex_Y1 - Yindex)
+				if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
 				{
-					if ((DI->Xpos + 1) <= (node_pointer->x_max))
+#if(TABLE_CHANGE==1)
+					for (node_pointer = idPointerTable[(DI->Ypos) + 1]; node_pointer; node_pointer = node_pointer->next)
 					{
-						DI->XYdata_X1Y1 = node_pointer->data;// DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];
+						if ((DI->Xpos + 1) <= (node_pointer->x_max))
+						{
+							DI->XYdata_X1Y1 = node_pointer->data;// DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];
 #if(PRINT_TEST)
-						printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
+							printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
 #endif
-						break;
+							break;
+						}
 					}
-				}
 #else
-				DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+					DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
 #if(PRINT_TEST)
-				printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
+					printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
 #endif
 #endif
 
-				DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+					DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+				}
+				else // Yval가 TorqueTable[9] 또는 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				}
 			}
-			else // Yval가 TorqueTable[9] 또는 TorqueTable[0]랑 같을 때
+			else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
 			{
-				DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * (1.f / (DI->Yindex_Y1 - DI->Yindex))) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
+				}
+				else // Yval가 TorqueTable[9]와 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
 			}
-		}
-		else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
-		{
-			if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * (1.f / (DI->Yindex_Y1 - DI->Yindex))) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
-			}
-			else // Yval가 TorqueTable[9]와 TorqueTable[0]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
-			}
-		}
 
 #elif(INTERPOLATION_ALGORITHM==3)
 		/*DI->Yindex_Div = (1.f / (DI->Yindex_Y1 - DI->Yindex));*/
 
 		//즉 0 < Xval < SpeedTable[Xpos]
-		if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
-		{
-			DI->Xindex_X1 = SpeedTable[DI->Xpos + 1];	//	Xindex_X1은 스피드테이블의 (Xpos+1)번째 값
-			DI->Xindex_Div = 1.f / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
-			
-			if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+			if ((Xval > SpeedTable[0]) && (Xval < SpeedTable[D_XMax - 1]))	// SpeedTable[0] < Xval < SpeedTable[9]
 			{
-				DI->Yindex_Div = (1.f / (DI->Yindex_Y1 - DI->Yindex));
+				DI->Xindex_X1 = SpeedTable[DI->Xpos + 1];	//	Xindex_X1은 스피드테이블의 (Xpos+1)번째 값
+				DI->Xindex_Div = 1.f / (DI->Xindex_X1 - DI->Xindex);	//	Xindex_Div = 1 / (Xindex_X1 - Xindex)
 
-				DI->Yindex_Y1 = TorqueTable[DI->Ypos + 1];	//	Yindex_Y1은 스피드테이블의 (Ypos+1)번째 값
-				DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+				if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->Yindex_Div = (1.f / (DI->Yindex_Y1 - DI->Yindex));
+
+					DI->Yindex_Y1 = TorqueTable[DI->Ypos + 1];	//	Yindex_Y1은 스피드테이블의 (Ypos+1)번째 값
+					DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
 #if(PRINT_TEST)
-				printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
+					printf("DI->XYdata_X1Y1 : %f\n", DI->XYdata_X1Y1);	// test위해 삽입
 #endif
 
-				DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-				DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+					DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+					DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+				}
+				else // Yval가 TorqueTable[9] 또는 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				}
 			}
-			else // Yval가 TorqueTable[9] 또는 TorqueTable[0]랑 같을 때
+			else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
 			{
-				DI->XYdata_Intp_Double = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+				if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
+				{
+					DI->Yindex_Div = (1.f / (DI->Yindex_Y1 - DI->Yindex));
+					DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
+				}
+				else // Yval가 TorqueTable[9]와 TorqueTable[0]랑 같을 때
+				{
+					DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
+				}
 			}
-		}
-		else // Xval == SpeedTable[9] 또는 Xval == SpeedTable[0]
-		{
-			if (Yval > TorqueTable[0] && Yval < TorqueTable[D_YMax - 1])	// TorqueTable[0] < Yval < TorqueTable[9]
-			{
-				DI->Yindex_Div = (1.f / (DI->Yindex_Y1 - DI->Yindex));
-				DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Y1 - DI->XYdata)) + DI->XYdata;
-			}
-			else // Yval가 TorqueTable[9]와 TorqueTable[0]랑 같을 때
-			{
-				DI->XYdata_Intp_Double = DI->XYdata;	//	XYdata_Intp_Double = XYdata;
-			}
-		}
 #else
 //	inf값 나오는 경우 있어서 보류
 
-		DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
+			DI->XYdata_X1Y1 = Table[DI->Ypos + 1][DI->Xpos + 1];	//	XYdata_X1Y1=Table[Ypos + 1][Xpos + 1]
 
-		DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
-		DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
-		DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
+			DI->XYdata_Intp_X1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1 - DI->XYdata)) + DI->XYdata;
+			DI->XYdata_Intp_Y1 = (((Xval - DI->Xindex) * DI->Xindex_Div) * (DI->XYdata_X1Y1 - DI->XYdata_Y1)) + DI->XYdata_Y1;
+			DI->XYdata_Intp_Double = (((Yval - DI->Yindex) * DI->Yindex_Div) * (DI->XYdata_Intp_Y1 - DI->XYdata_Intp_X1)) + DI->XYdata_Intp_X1;
 
+#endif
+#if(INTERPOLATION_TIME)
+		}
+		inter_end = clock();
+		printf("Interpolation 계산을 %d번 반복 : %dms\n", TEST_COUNT, inter_end - inter_start);
 #endif
 		if (DI->QAxis == D_SET)	// QAxis가 1이면
 		{
@@ -1156,14 +1275,16 @@ int main()
 		Id.Yval = RandomTable[i % 32];
 		Id.QAxis = D_CLEAR; // QAxis는 0이다
 #else
-	//Id.Xval = 1.01;		// X값 설정
-	//Id.Yval = 0.43;		// Y값 설정
-	//Id.QAxis = D_CLEAR; // QAxis는 0이다
-
-	Id.Xval = 0.91;		// X값 설정
-	Id.Yval = 0.48;		// Y값 설정
+	Id.Xval = 0.52;		// X값 설정
+	Id.Yval = 0.1;		// Y값 설정
 	Id.QAxis = D_CLEAR; // QAxis는 0이다
 
+	// index 4의 중간값
+	//Id.Xval = 0.91;		// X값 설정
+	//Id.Yval = 0.48;		// Y값 설정
+	//Id.QAxis = D_CLEAR; // QAxis는 0이다
+
+	// 상한 경계 너머 값
 	//Id.Xval = 1.51;		// X값 범위 외
 	//Id.Yval = 1.23;		// Y값 범위 외
 	//Id.QAxis = D_CLEAR; // QAxis는 0이다
